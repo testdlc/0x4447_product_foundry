@@ -10,7 +10,7 @@
 					{
 						"Effect": "Allow",
 						"Action": "s3:*",
-						"Resource": { "Fn::Sub": "arn:aws:s3:::0x4447-drive-cloudformation/*"}
+						"Resource": { "Fn::Sub": "arn:aws:s3:::${ResultDestination}/*"}
 					}
 				]
 			}

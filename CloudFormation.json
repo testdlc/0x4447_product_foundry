@@ -10,16 +10,8 @@
 			"Description": "Write the name of the owner of the repository. Either the Org name or the user name.",
 			"Type": "String"
 		},
-		"GitHubRepoName": {
-			"Description": "Write the repository name, as it's seen on GitHub.",
-			"Type": "String"
-		},
 		"GitHubToken": {
 			"Description": "Write the Personal access tokens (can be created under this URL: https://github.com/settings/tokens) for CodePipeline to have access to the GitHub repository, even if it is public.",
-			"Type": "String"
-		},
-		"CodePipelineArtifact": {
-			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
 			"Type": "String"
 		},
 		"Stage": {
@@ -31,6 +23,18 @@
 			],
 			"Default": "master",
 			"ConstraintDescription": "must only contain lowercase letters and numbers, and can't start with a number."
+		},
+		"ResultDestination": {
+			"Description": "The S3 bucket name where CodeBuild will push the result.",
+			"Type": "String"
+		},
+		"CodePipelineArtifact": {
+			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
+			"Type": "String"
+		},
+		"GitHubRepoName": {
+			"Description": "Write the repository name, as it's seen on GitHub.",
+			"Type": "String"
 		}
 	},
 	"Resources": {
@@ -152,7 +156,7 @@
 							"Effect": "Allow",
 							"Action": "s3:*",
 							"Resource": {
-								"Fn::Sub": "arn:aws:s3:::0x4447-drive-cloudformation/*"
+								"Fn::Sub": "arn:aws:s3:::${ResultDestination}/*"
 							}
 						}
 					]
