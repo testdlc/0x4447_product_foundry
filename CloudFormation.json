@@ -6,6 +6,14 @@
 			"Description": "Write the name of the owner of the repository. Either the Org name or the user name.",
 			"Type": "String"
 		},
+		"ResultLocation": {
+			"Description": "Write the S3 Bucket name where the CodeBuild should have access to save your files.",
+			"Type": "String"
+		},
+		"CodePipelineArtifact": {
+			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
+			"Type": "String"
+		},
 		"Stage": {
 			"Description": "Select what Stage needs to be deployed.",
 			"Type": "String",
@@ -23,10 +31,6 @@
 		"GitHubToken": {
 			"Description": "Write the Personal access tokens (can be created under this URL: https://github.com/settings/tokens) for CodePipeline to have access to the GitHub repository, even if it is public.",
 			"NoEcho": true,
-			"Type": "String"
-		},
-		"CodePipelineArtifact": {
-			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
 			"Type": "String"
 		}
 	},
@@ -105,6 +109,29 @@
 									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}:*"
 								}
 							]
+						}
+					]
+				}
+			}
+		},
+		"CodeBuildDeployRoleS3RestingBucket": {
+			"Type": "AWS::IAM::Policy",
+			"Properties": {
+				"Roles": [
+					{
+						"Ref": "CodeBuildCastingRole"
+					}
+				],
+				"PolicyName": "s3_result_location",
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Action": "s3:*",
+							"Resource": {
+								"Fn::Sub": "arn:aws:s3:::${ResultLocation}/*"
+							}
 						}
 					]
 				}
