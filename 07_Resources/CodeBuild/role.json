@@ -2,7 +2,7 @@
 	"CodeBuildCastingRole": {
 		"Type": "AWS::IAM::Role",
 		"Properties": {
-			"RoleName": { "Fn::Sub": "${CPName}_casting" },
+			"RoleName": { "Fn::Sub": "${AWS::StackName}_codebuild" },
 			"AssumeRolePolicyDocument": {
 				"Version": "2012-10-17",
 				"Statement": [

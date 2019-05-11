@@ -1,17 +1,9 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "This stack auto deploys the S3-Email solution.",
+	"Description": "This stack will create a Pipeline which will deploy any GitHub repository based on the buildspec.yml file.",
 	"Parameters": {
-		"CPName": {
-			"Description": "Give the CodePipeline a unique name.",
-			"Type": "String"
-		},
 		"GitHubOwner": {
 			"Description": "Write the name of the owner of the repository. Either the Org name or the user name.",
-			"Type": "String"
-		},
-		"GitHubToken": {
-			"Description": "Write the Personal access tokens (can be created under this URL: https://github.com/settings/tokens) for CodePipeline to have access to the GitHub repository, even if it is public.",
 			"Type": "String"
 		},
 		"Stage": {
@@ -24,16 +16,17 @@
 			"Default": "master",
 			"ConstraintDescription": "must only contain lowercase letters and numbers, and can't start with a number."
 		},
-		"ResultDestination": {
-			"Description": "The S3 bucket name where CodeBuild will push the result.",
+		"GitHubRepoName": {
+			"Description": "Write the repository name, as it's seen on GitHub.",
+			"Type": "String"
+		},
+		"GitHubToken": {
+			"Description": "Write the Personal access tokens (can be created under this URL: https://github.com/settings/tokens) for CodePipeline to have access to the GitHub repository, even if it is public.",
+			"NoEcho": true,
 			"Type": "String"
 		},
 		"CodePipelineArtifact": {
 			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
-			"Type": "String"
-		},
-		"GitHubRepoName": {
-			"Description": "Write the repository name, as it's seen on GitHub.",
 			"Type": "String"
 		}
 	},
@@ -42,7 +35,7 @@
 			"Type": "AWS::CodeBuild::Project",
 			"Properties": {
 				"Name": {
-					"Fn::Sub": "${CPName}_casting"
+					"Ref": "AWS::StackName"
 				},
 				"ServiceRole": {
 					"Fn::GetAtt": [
@@ -69,7 +62,7 @@
 			"Type": "AWS::IAM::Role",
 			"Properties": {
 				"RoleName": {
-					"Fn::Sub": "${CPName}_casting"
+					"Fn::Sub": "${AWS::StackName}_codebuild"
 				},
 				"AssumeRolePolicyDocument": {
 					"Version": "2012-10-17",
@@ -88,12 +81,12 @@
 		"CodeBuildDeployRoleCWL": {
 			"Type": "AWS::IAM::Policy",
 			"Properties": {
+				"PolicyName": "cloud_watch_log_access",
 				"Roles": [
 					{
 						"Ref": "CodeBuildCastingRole"
 					}
 				],
-				"PolicyName": "cloud_watch_log_access",
 				"PolicyDocument": {
 					"Version": "2012-10-17",
 					"Statement": [
@@ -120,12 +113,12 @@
 		"CodeBuildDeployRoleS3Artifact": {
 			"Type": "AWS::IAM::Policy",
 			"Properties": {
+				"PolicyName": "s3_artifact",
 				"Roles": [
 					{
 						"Ref": "CodeBuildCastingRole"
 					}
 				],
-				"PolicyName": "s3_artifact",
 				"PolicyDocument": {
 					"Version": "2012-10-17",
 					"Statement": [
@@ -140,34 +133,11 @@
 				}
 			}
 		},
-		"CodeBuildDeployRoleS3RestingBucket": {
-			"Type": "AWS::IAM::Policy",
-			"Properties": {
-				"Roles": [
-					{
-						"Ref": "CodeBuildCastingRole"
-					}
-				],
-				"PolicyName": "s3_resting_bucket",
-				"PolicyDocument": {
-					"Version": "2012-10-17",
-					"Statement": [
-						{
-							"Effect": "Allow",
-							"Action": "s3:*",
-							"Resource": {
-								"Fn::Sub": "arn:aws:s3:::${ResultDestination}/*"
-							}
-						}
-					]
-				}
-			}
-		},
 		"PipelineAutoDeploy": {
 			"Type": "AWS::CodePipeline::Pipeline",
 			"Properties": {
 				"Name": {
-					"Ref": "CPName"
+					"Ref": "AWS::StackName"
 				},
 				"ArtifactStore": {
 					"Location": {
@@ -249,7 +219,7 @@
 			"Type": "AWS::IAM::Role",
 			"Properties": {
 				"RoleName": {
-					"Fn::Sub": "${CPName}_pipeline"
+					"Fn::Sub": "${AWS::StackName}_pipeline"
 				},
 				"AssumeRolePolicyDocument": {
 					"Version": "2012-10-17",
@@ -278,12 +248,12 @@
 					"Version": "2012-10-17",
 					"Statement": [
 						{
+							"Effect": "Allow",
 							"Action": [
 								"codebuild:BatchGetBuilds",
 								"codebuild:StartBuild"
 							],
-							"Resource": "*",
-							"Effect": "Allow"
+							"Resource": "*"
 						}
 					]
 				}
@@ -292,7 +262,7 @@
 		"PipelineConverterPolicyS3": {
 			"Type": "AWS::IAM::Policy",
 			"Properties": {
-				"PolicyName": "s3",
+				"PolicyName": "s3_artifact",
 				"Roles": [
 					{
 						"Ref": "PipelineAutoDeployRole"

@@ -1,6 +1,0 @@
-{
-	"ResultDestination": {
-		"Description": "The S3 bucket name where CodeBuild will push the result.",
-		"Type": "String"
-	}
-}

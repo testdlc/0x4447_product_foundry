@@ -2,7 +2,7 @@
 	"PipelineAutoDeploy": {
 		"Type": "AWS::CodePipeline::Pipeline",
 		"Properties": {
-			"Name": { "Ref": "CPName" },
+			"Name": { "Ref": "AWS::StackName" },
 			"ArtifactStore": {
 				"Location": { "Ref": "CodePipelineArtifact" },
 				"Type": "S3"

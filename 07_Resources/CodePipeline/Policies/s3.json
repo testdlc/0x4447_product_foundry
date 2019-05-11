@@ -2,7 +2,7 @@
 	"PipelineConverterPolicyS3": {
 		"Type": "AWS::IAM::Policy",
 		"Properties": {
-			"PolicyName": "s3",
+			"PolicyName": "s3_artifact",
 			"Roles": [ { "Ref": "PipelineAutoDeployRole" } ],
 			"PolicyDocument": {
 				"Version": "2012-10-17",

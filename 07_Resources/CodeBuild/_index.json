@@ -2,7 +2,7 @@
 	"CodeBuildCasting": {
 		"Type": "AWS::CodeBuild::Project",
 		"Properties": {
-			"Name": { "Fn::Sub": "${CPName}_casting" },
+			"Name": { "Ref": "AWS::StackName" },
 			"ServiceRole": { "Fn::GetAtt": ["CodeBuildCastingRole", "Arn"] },
 			"TimeoutInMinutes": 60,
 			"Source": {

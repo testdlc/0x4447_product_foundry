@@ -2,8 +2,8 @@
 	"CodeBuildDeployRoleCWL": {
 		"Type": "AWS::IAM::Policy",
 		"Properties": {
-			"Roles": [ { "Ref": "CodeBuildCastingRole" } ],
 			"PolicyName": "cloud_watch_log_access",
+			"Roles": [ { "Ref": "CodeBuildCastingRole" } ],
 			"PolicyDocument": {
 				"Version": "2012-10-17",
 				"Statement": [

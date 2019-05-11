@@ -2,7 +2,7 @@
 	"PipelineAutoDeployRole": {
 		"Type": "AWS::IAM::Role",
 		"Properties": {
-			"RoleName": { "Fn::Sub": "${CPName}_pipeline" },
+			"RoleName": { "Fn::Sub": "${AWS::StackName}_pipeline" },
 			"AssumeRolePolicyDocument": {
 				"Version": "2012-10-17",
 				"Statement": [
