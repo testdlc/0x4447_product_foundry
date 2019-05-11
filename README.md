@@ -1,4 +1,4 @@
-# Foundry
+# 🌋 Foundry
 
 This stack will create a Pipeline which will deploy any GitHub repository based on the actions specified in the `buildspec.yml` file.
 
