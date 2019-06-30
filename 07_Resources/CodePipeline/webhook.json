@@ -1,0 +1,21 @@
+{
+	"PipelineAutoDeployWebhook": {
+		"Type": "AWS::CodePipeline::Webhook",
+		"Properties": {
+			"Authentication": "GITHUB_HMAC",
+			"AuthenticationConfiguration": {
+				"SecretToken": { "Ref": "GitHubToken" }
+			},
+			"Filters": [
+				{
+					"JsonPath": "$.ref",
+					"MatchEquals": "refs/heads/{Branch}"
+				}
+			],
+			"TargetPipeline": { "Ref": "PipelineAutoDeploy" },
+			"TargetAction": "Source",
+			"TargetPipelineVersion": { "Fn::GetAtt": [ "PipelineAutoDeploy", "Version" ]},
+			"RegisterWithThirdParty": true
+		}
+	}
+}

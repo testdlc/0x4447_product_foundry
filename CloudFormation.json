@@ -2,16 +2,13 @@
 	"AWSTemplateFormatVersion": "2010-09-09",
 	"Description": "This stack will create a Pipeline which will deploy any GitHub repository based on the buildspec.yml file.",
 	"Parameters": {
-		"GitHubOwner": {
-			"Description": "Write the name of the owner of the repository. Either the Org name or the user name.",
+		"GitHubRepoName": {
+			"Description": "Write the repository name, as it's seen on GitHub.",
 			"Type": "String"
 		},
-		"ResultLocation": {
-			"Description": "Write the S3 Bucket name where the CodeBuild should have access to save your files.",
-			"Type": "String"
-		},
-		"CodePipelineArtifact": {
-			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
+		"GitHubToken": {
+			"Description": "Write the Personal access tokens (can be created under this URL: https://github.com/settings/tokens) for CodePipeline to have access to the GitHub repository, even if it is public.",
+			"NoEcho": true,
 			"Type": "String"
 		},
 		"Stage": {
@@ -24,13 +21,16 @@
 			"Default": "master",
 			"ConstraintDescription": "must only contain lowercase letters and numbers, and can't start with a number."
 		},
-		"GitHubRepoName": {
-			"Description": "Write the repository name, as it's seen on GitHub.",
+		"GitHubOwner": {
+			"Description": "Write the name of the owner of the repository. Either the Org name or the user name.",
 			"Type": "String"
 		},
-		"GitHubToken": {
-			"Description": "Write the Personal access tokens (can be created under this URL: https://github.com/settings/tokens) for CodePipeline to have access to the GitHub repository, even if it is public.",
-			"NoEcho": true,
+		"CodePipelineArtifact": {
+			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
+			"Type": "String"
+		},
+		"ResultLocation": {
+			"Description": "Write the S3 Bucket name where the CodeBuild should have access to save your files.",
 			"Type": "String"
 		}
 	},
@@ -82,38 +82,6 @@
 				}
 			}
 		},
-		"CodeBuildDeployRoleCWL": {
-			"Type": "AWS::IAM::Policy",
-			"Properties": {
-				"PolicyName": "cloud_watch_log_access",
-				"Roles": [
-					{
-						"Ref": "CodeBuildCastingRole"
-					}
-				],
-				"PolicyDocument": {
-					"Version": "2012-10-17",
-					"Statement": [
-						{
-							"Effect": "Allow",
-							"Action": [
-								"logs:CreateLogGroup",
-								"logs:CreateLogStream",
-								"logs:PutLogEvents"
-							],
-							"Resource": [
-								{
-									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}"
-								},
-								{
-									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}:*"
-								}
-							]
-						}
-					]
-				}
-			}
-		},
 		"CodeBuildDeployRoleS3RestingBucket": {
 			"Type": "AWS::IAM::Policy",
 			"Properties": {
@@ -160,6 +128,38 @@
 				}
 			}
 		},
+		"CodeBuildDeployRoleCWL": {
+			"Type": "AWS::IAM::Policy",
+			"Properties": {
+				"PolicyName": "cloud_watch_log_access",
+				"Roles": [
+					{
+						"Ref": "CodeBuildCastingRole"
+					}
+				],
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Action": [
+								"logs:CreateLogGroup",
+								"logs:CreateLogStream",
+								"logs:PutLogEvents"
+							],
+							"Resource": [
+								{
+									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}"
+								},
+								{
+									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}:*"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
 		"PipelineAutoDeploy": {
 			"Type": "AWS::CodePipeline::Pipeline",
 			"Properties": {
@@ -201,7 +201,7 @@
 									"Branch": {
 										"Ref": "Stage"
 									},
-									"PollForSourceChanges": true,
+									"PollForSourceChanges": false,
 									"OAuthToken": {
 										"Ref": "GitHubToken"
 									}
@@ -242,6 +242,34 @@
 				]
 			}
 		},
+		"PipelineAutoDeployWebhook": {
+			"Type": "AWS::CodePipeline::Webhook",
+			"Properties": {
+				"Authentication": "GITHUB_HMAC",
+				"AuthenticationConfiguration": {
+					"SecretToken": {
+						"Ref": "GitHubToken"
+					}
+				},
+				"Filters": [
+					{
+						"JsonPath": "$.ref",
+						"MatchEquals": "refs/heads/{Branch}"
+					}
+				],
+				"TargetPipeline": {
+					"Ref": "PipelineAutoDeploy"
+				},
+				"TargetAction": "Source",
+				"TargetPipelineVersion": {
+					"Fn::GetAtt": [
+						"PipelineAutoDeploy",
+						"Version"
+					]
+				},
+				"RegisterWithThirdParty": true
+			}
+		},
 		"PipelineAutoDeployRole": {
 			"Type": "AWS::IAM::Role",
 			"Properties": {
@@ -257,6 +285,29 @@
 								"Service": "codepipeline.amazonaws.com"
 							},
 							"Action": "sts:AssumeRole"
+						}
+					]
+				}
+			}
+		},
+		"PipelineConverterPolicyS3": {
+			"Type": "AWS::IAM::Policy",
+			"Properties": {
+				"PolicyName": "s3_artifact",
+				"Roles": [
+					{
+						"Ref": "PipelineAutoDeployRole"
+					}
+				],
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Action": "s3:*",
+							"Resource": {
+								"Fn::Sub": "arn:aws:s3:::${CodePipelineArtifact}/*"
+							}
 						}
 					]
 				}
@@ -281,29 +332,6 @@
 								"codebuild:StartBuild"
 							],
 							"Resource": "*"
-						}
-					]
-				}
-			}
-		},
-		"PipelineConverterPolicyS3": {
-			"Type": "AWS::IAM::Policy",
-			"Properties": {
-				"PolicyName": "s3_artifact",
-				"Roles": [
-					{
-						"Ref": "PipelineAutoDeployRole"
-					}
-				],
-				"PolicyDocument": {
-					"Version": "2012-10-17",
-					"Statement": [
-						{
-							"Effect": "Allow",
-							"Action": "s3:*",
-							"Resource": {
-								"Fn::Sub": "arn:aws:s3:::${CodePipelineArtifact}/*"
-							}
 						}
 					]
 				}
