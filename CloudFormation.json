@@ -1,7 +1,64 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
 	"Description": "This stack will create a Pipeline which will deploy any GitHub repository based on the buildspec.yml file.",
+	"Metadata": {
+		"AWS::CloudFormation::Interface": {
+			"ParameterGroups": [
+				{
+					"Label": {
+						"default": "Setup"
+					},
+					"Parameters": [
+						"CodePipelineArtifact"
+					]
+				},
+				{
+					"Label": {
+						"default": "GitHub"
+					},
+					"Parameters": [
+						"GitHubToken",
+						"GitHubOwner",
+						"GitHubRepoName",
+						"Stage"
+					]
+				},
+				{
+					"Label": {
+						"default": "Policies Info"
+					},
+					"Parameters": [
+						"ResultLocation"
+					]
+				}
+			],
+			"ParameterLabels": {
+				"CodePipelineArtifact": {
+					"default": "CodePipeline S3 Bucket location"
+				},
+				"GitHubToken": {
+					"default": "GitHub Token"
+				},
+				"GitHubOwner": {
+					"default": "GitHub Owner"
+				},
+				"GitHubRepoName": {
+					"default": "GitHub Repository Name"
+				},
+				"Stage": {
+					"default": "GitHub branch"
+				},
+				"ResultLocation": {
+					"default": "Result Location"
+				}
+			}
+		}
+	},
 	"Parameters": {
+		"GitHubOwner": {
+			"Description": "Write the name of the owner of the repository. Either the Org name or the user name.",
+			"Type": "String"
+		},
 		"GitHubRepoName": {
 			"Description": "Write the repository name, as it's seen on GitHub.",
 			"Type": "String"
@@ -11,27 +68,23 @@
 			"NoEcho": true,
 			"Type": "String"
 		},
-		"Stage": {
-			"Description": "Select what Stage needs to be deployed.",
+		"ResultLocation": {
+			"Description": "Write the S3 Bucket name where CodeBuild should have access to save your files. Even if it is a Bucket in a different AWS Account.",
 			"Type": "String",
-			"AllowedValues": [
-				"master",
-				"development"
-			],
-			"Default": "master",
-			"ConstraintDescription": "must only contain lowercase letters and numbers, and can't start with a number."
-		},
-		"GitHubOwner": {
-			"Description": "Write the name of the owner of the repository. Either the Org name or the user name.",
-			"Type": "String"
+			"Default": "0x4447-drive-cloudformation"
 		},
 		"CodePipelineArtifact": {
 			"Description": "The S3 bucket name where CodePipeline will store the artifacts.",
 			"Type": "String"
 		},
-		"ResultLocation": {
-			"Description": "Write the S3 Bucket name where the CodeBuild should have access to save your files.",
-			"Type": "String"
+		"Stage": {
+			"Description": "Select which branch you'd like to deploy",
+			"Type": "String",
+			"AllowedValues": [
+				"master",
+				"development"
+			],
+			"Default": "master"
 		}
 	},
 	"Resources": {
@@ -82,6 +135,38 @@
 				}
 			}
 		},
+		"CodeBuildDeployRoleCWL": {
+			"Type": "AWS::IAM::Policy",
+			"Properties": {
+				"PolicyName": "cloud_watch_log_access",
+				"Roles": [
+					{
+						"Ref": "CodeBuildCastingRole"
+					}
+				],
+				"PolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Action": [
+								"logs:CreateLogGroup",
+								"logs:CreateLogStream",
+								"logs:PutLogEvents"
+							],
+							"Resource": [
+								{
+									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}"
+								},
+								{
+									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}:*"
+								}
+							]
+						}
+					]
+				}
+			}
+		},
 		"CodeBuildDeployRoleS3RestingBucket": {
 			"Type": "AWS::IAM::Policy",
 			"Properties": {
@@ -123,38 +208,6 @@
 							"Resource": {
 								"Fn::Sub": "arn:aws:s3:::${CodePipelineArtifact}/*"
 							}
-						}
-					]
-				}
-			}
-		},
-		"CodeBuildDeployRoleCWL": {
-			"Type": "AWS::IAM::Policy",
-			"Properties": {
-				"PolicyName": "cloud_watch_log_access",
-				"Roles": [
-					{
-						"Ref": "CodeBuildCastingRole"
-					}
-				],
-				"PolicyDocument": {
-					"Version": "2012-10-17",
-					"Statement": [
-						{
-							"Effect": "Allow",
-							"Action": [
-								"logs:CreateLogGroup",
-								"logs:CreateLogStream",
-								"logs:PutLogEvents"
-							],
-							"Resource": [
-								{
-									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}"
-								},
-								{
-									"Fn::Sub": "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${AWS::StackName}:*"
-								}
-							]
 						}
 					]
 				}
@@ -242,6 +295,26 @@
 				]
 			}
 		},
+		"PipelineAutoDeployRole": {
+			"Type": "AWS::IAM::Role",
+			"Properties": {
+				"RoleName": {
+					"Fn::Sub": "${AWS::StackName}_pipeline"
+				},
+				"AssumeRolePolicyDocument": {
+					"Version": "2012-10-17",
+					"Statement": [
+						{
+							"Effect": "Allow",
+							"Principal": {
+								"Service": "codepipeline.amazonaws.com"
+							},
+							"Action": "sts:AssumeRole"
+						}
+					]
+				}
+			}
+		},
 		"PipelineAutoDeployWebhook": {
 			"Type": "AWS::CodePipeline::Webhook",
 			"Properties": {
@@ -270,21 +343,25 @@
 				"RegisterWithThirdParty": true
 			}
 		},
-		"PipelineAutoDeployRole": {
-			"Type": "AWS::IAM::Role",
+		"PipelineConverterPolicyCodeBuild": {
+			"Type": "AWS::IAM::Policy",
 			"Properties": {
-				"RoleName": {
-					"Fn::Sub": "${AWS::StackName}_pipeline"
-				},
-				"AssumeRolePolicyDocument": {
+				"PolicyName": "code_build",
+				"Roles": [
+					{
+						"Ref": "PipelineAutoDeployRole"
+					}
+				],
+				"PolicyDocument": {
 					"Version": "2012-10-17",
 					"Statement": [
 						{
 							"Effect": "Allow",
-							"Principal": {
-								"Service": "codepipeline.amazonaws.com"
-							},
-							"Action": "sts:AssumeRole"
+							"Action": [
+								"codebuild:BatchGetBuilds",
+								"codebuild:StartBuild"
+							],
+							"Resource": "*"
 						}
 					]
 				}
@@ -308,30 +385,6 @@
 							"Resource": {
 								"Fn::Sub": "arn:aws:s3:::${CodePipelineArtifact}/*"
 							}
-						}
-					]
-				}
-			}
-		},
-		"PipelineConverterPolicyCodeBuild": {
-			"Type": "AWS::IAM::Policy",
-			"Properties": {
-				"PolicyName": "code_build",
-				"Roles": [
-					{
-						"Ref": "PipelineAutoDeployRole"
-					}
-				],
-				"PolicyDocument": {
-					"Version": "2012-10-17",
-					"Statement": [
-						{
-							"Effect": "Allow",
-							"Action": [
-								"codebuild:BatchGetBuilds",
-								"codebuild:StartBuild"
-							],
-							"Resource": "*"
 						}
 					]
 				}

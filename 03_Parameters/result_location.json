@@ -1,6 +1,7 @@
 {
 	"ResultLocation": {
-		"Description": "Write the S3 Bucket name where the CodeBuild should have access to save your files.",
-		"Type": "String"
+		"Description": "Write the S3 Bucket name where CodeBuild should have access to save your files. Even if it is a Bucket in a different AWS Account.",
+		"Type": "String",
+		"Default": "0x4447-drive-cloudformation"
 	}
 }

@@ -1,0 +1,26 @@
+{
+	"AWS::CloudFormation::Interface" : {
+		"ParameterGroups": [
+			{
+				"Label" : { "default" : "Setup" },
+				"Parameters" : [ "CodePipelineArtifact" ]
+			},
+			{
+				"Label" : { "default" : "GitHub" },
+				"Parameters" : [ "GitHubToken", "GitHubOwner", "GitHubRepoName", "Stage" ]
+			},
+			{
+				"Label" : { "default" : "Policies Info" },
+				"Parameters" : [ "ResultLocation" ]
+			}
+		],
+		"ParameterLabels": {
+			"CodePipelineArtifact": { "default" : "CodePipeline S3 Bucket location" },
+			"GitHubToken": { "default" : "GitHub Token" },
+			"GitHubOwner": { "default" : "GitHub Owner" },
+			"GitHubRepoName": { "default" : "GitHub Repository Name" },
+			"Stage": { "default" : "GitHub branch" },
+			"ResultLocation": { "default" : "Result Location" }
+		}
+	}
+}
