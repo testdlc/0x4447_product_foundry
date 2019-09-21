@@ -1,8 +1,7 @@
 {
 	"Stage": {
-		"Description": "Select which branch you'd like to deploy",
+		"Description": "Type which branch you'd like to deploy. Normally that would be 'master' or 'development'",
 		"Type": "String",
-		"AllowedValues": ["master", "development"],
 		"Default": "master"
 	}
 }
